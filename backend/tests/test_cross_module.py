@@ -197,9 +197,10 @@ def test_pipeline_transform_link():
 
 
 def test_run_history_confirm_triggers():
-    """测试run_history确认完成触发自动去重和Schema检查。"""
+    """测试run_history确认完成触发自动去重和Schema检查（持久化回执口径）。"""
     from app.store import store
     from app.services.run_history import RunHistoryService
+    from app.services.schema_check import SchemaCheckService
     from app import persistence as persist
 
     svc = RunHistoryService()
@@ -220,10 +221,12 @@ def test_run_history_confirm_triggers():
     dedup_triggered = [r for r in dedup_reports if r.get("trigger") == "run_history_confirm"]
     # 去重触发需要page_dedup有已生效规则和page_快照文件存在
 
-    # 验证触发Schema
-    schema_reports = persist.read_jsonl("reports", "schema_check_report.jsonl")
-    schema_triggered = [r for r in schema_reports if r.get("trigger") == "run_history_confirm"]
-    assert len(schema_triggered) >= 1, f"Schema检查未触发: {len(schema_triggered)}"
+    # 验证Schema检验回执已持久化（结论按规则实际判定，不再写死pass）
+    receipt = SchemaCheckService().latest_receipt(run_id)
+    assert receipt is not None, "确认完成后必须存在持久化Schema检验回执"
+    assert receipt["status"] == "published"
+    assert receipt["conclusion"] in ("pass", "fail", "incomplete")
+    assert "input_snapshot" in receipt and "rules_applied" in receipt
 
 
 def test_quality_report_generation():

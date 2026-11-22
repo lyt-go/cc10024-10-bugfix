@@ -49,7 +49,9 @@ def append_jsonl(sub: str, filename: str, record: dict[str, Any]) -> str:
 
 def read_jsonl(sub: str, filename: str) -> list[dict[str, Any]]:
     path = data_path(sub, filename)
-    if not os.path.exists(path):
+    if not os.path.exists(path) or os.path.isdir(path):
+        # 文件缺失或被异常占位（如同名目录）时按“尚无记录”处理，
+        # 不能让读取崩溃，否则明细缺失时连运行详情都无法查看。
         return []
     records: list[dict[str, Any]] = []
     with open(path, "r", encoding="utf-8") as f:
